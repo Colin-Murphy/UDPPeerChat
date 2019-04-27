@@ -1,0 +1,104 @@
+#!/bin/sh
+
+#Create 2 namespaces for bridges
+ip netns add b0ns
+ip netns add b1ns
+
+
+#Create 5 namespaces for the applications
+ip netns add pc1
+ip netns exec pc1 ip link add eth0 type veth peer name bpc1
+ip netns exec pc1 ip link set bpc1 netns b0ns
+
+
+ip netns add pc2
+ip netns exec pc2 ip link add eth0 type veth peer name bpc2
+ip netns exec pc2 ip link set bpc2 netns b0ns
+
+
+ip netns add pc3
+ip netns exec pc3 ip link add eth0 type veth peer name bpc3
+ip netns exec pc3 ip link set bpc3 netns b1ns
+
+
+ip netns add pc4
+ip netns exec pc4 ip link add eth0 type veth peer name bpc4
+ip netns exec pc4 ip link set bpc4 netns b1ns
+
+
+ip netns add pc5
+ip netns exec pc5 ip link add eth0 type veth peer name eth2
+ip netns exec pc5 ifconfig eth0 10.0.2.1/24
+ip netns exec pc5 ifconfig lo up
+
+#Create the router namespace
+ip netns add router
+ip netns exec router ip link add eth0 type veth peer name b0r
+ip netns exec router ip link add eth1 type veth peer name b1r
+#Move pc5 connection directly to router
+ip netns exec pc5 ip link set eth2 netns router
+ip netns exec router ifconfig eth2 10.0.2.250/24
+
+ip netns exec router ip link set b0r netns b0ns
+
+ip netns exec router ip link set b1r netns b1ns
+
+#Configure bridge 0
+ip netns exec b0ns ifconfig lo up
+ip netns exec b0ns ifconfig bpc1 up
+ip netns exec b0ns ifconfig bpc2 up
+ip netns exec b0ns ifconfig b0r up
+ip netns exec b0ns ip link add br0 type bridge
+ip netns exec b0ns ifconfig br0 up
+ip netns exec b0ns ip link set bpc1 master br0
+ip netns exec b0ns ip link set bpc2 master br0
+ip netns exec b0ns ip link set b0r master br0
+
+#Give ips
+ip netns exec pc1 ifconfig eth0 10.0.0.1/24
+ip netns exec pc1 ifconfig lo up
+
+ip netns exec pc2 ifconfig eth0 10.0.0.2/24
+ip netns exec pc2 ifconfig lo up
+
+ip netns exec router ifconfig eth0 10.0.0.250/24
+#dont bring router up yet because it's not ready
+
+#Configure bridge 1
+ip netns exec b1ns ifconfig lo up
+ip netns exec b1ns ifconfig bpc3 up
+ip netns exec b1ns ifconfig bpc4 up
+ip netns exec b1ns ifconfig b1r up
+ip netns exec b1ns ip link add br1 type bridge
+ip netns exec b1ns ifconfig br1 up
+ip netns exec b1ns ip link set bpc3 master br1
+ip netns exec b1ns ip link set bpc4 master br1
+ip netns exec b1ns ip link set b1r master br1
+
+#Give ips
+ip netns exec pc3 ifconfig eth0 10.0.1.1/24
+ip netns exec pc3 ifconfig lo up
+
+ip netns exec pc4 ifconfig eth0 10.0.1.2/24
+ip netns exec pc4 ifconfig lo up
+
+ip netns exec router ifconfig eth1 10.0.1.250
+ip netns exec router echo 1 > /proc/sys/net/ipv4/ip_forward
+ip netns exec router ifconfig lo up
+
+ip netns exec pc1 route add default gw 10.0.0.250
+ip netns exec pc2 route add default gw 10.0.0.250
+ip netns exec pc3 route add default gw 10.0.1.250
+ip netns exec pc4 route add default gw 10.0.1.250
+ip netns exec pc5 route add default gw 10.0.2.250
+
+
+
+ip netns exec pc1 xterm -hold -T "Chat 1" -e "echo Chat 1; $SHELL" &
+ip netns exec pc2 xterm -hold -T "Chat 2" -e "echo Chat 2; $SHELL" &
+ip netns exec pc3 xterm -hold -T "Chat 3" -e "echo Chat 3; $SHELL" &
+ip netns exec pc4 xterm -hold -T "Chat 4" -e "echo Chat 4; $SHELL" &
+ip netns exec pc5 xterm -hold -T "Chat 5" -e "echo Chat 5; $SHELL" &
+
+ip netns exec router xterm -hold -T "Router" -e "echo Router; $SHELL" &
+

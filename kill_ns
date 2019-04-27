@@ -1,0 +1,12 @@
+#!/bin/sh
+
+ip netns delete pc1
+ip netns delete pc2
+ip netns delete pc3
+ip netns delete pc4
+ip netns delete pc5
+
+ip netns delete b0ns
+ip netns delete b1ns
+
+ip netns delete router
