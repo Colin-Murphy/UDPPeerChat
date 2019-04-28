@@ -21,11 +21,77 @@ public class PeerChat {
 	private ChatUI ui = null;
 
 	public PeerChat(String[] args) {
-		//Expected arg length
-		int argsNoPort = 3;
-		int argsWithPort = 5;
 
+		int len = args.length;
+
+		int i = 0;
+		String name = "";
+		int age = 0;
+		int zip = 0;
+		int port = 0;
+
+		String[] forwards = new String[4];
+		int fIndex = 0;
+
+		ui = new ChatUI();
+
+		while (i<len) {
+			if (len-i == 3) {
+				name = args[i];
+			}
+
+			else if (len-i == 2) {
+				try {
+					zip = Integer.parseInt(args[i]);
+				}
+				catch (Exception e) {}
+			}
+
+			else if (len-i == 1) {
+				try {
+					age = Integer.parseInt(args[i]);
+				}
+
+				catch (Exception e) {}
+			}
+
+			else {
+				if (args[i].equals("-p")) {
+					try {
+						port = Integer.parseInt(args[i+1]);
+						i++;
+					}
+
+					catch (Exception e) {}
+				}
+				else if (args[i].equals("-f")) {
+					forwards[fIndex] = args[i+1];
+					fIndex++;
+					i++;
+				}
+			}
+
+			i++;
+		}
+
+		s = new Session(name, zip, age, port, forwards);
+		ui.s = s;
+		ui.start();
+
+		/*
+		System.out.println(name);
+		System.out.println(age);
+		System.out.println(zip);
+		System.out.println(port);
+
+		for (int j=0; j<fIndex; j++) {
+			System.out.println(forwards[j]);
+		}
+		*/
+
+		/*
 		try {
+
 			ui = new ChatUI();
 			if (args.length != argsWithPort && args.length != argsNoPort) {
 				System.err.println("Invalid Arguments: Exiting...");
@@ -55,6 +121,7 @@ public class PeerChat {
 			System.err.println("Invalid Arguments: Exiting...");
 			System.exit(1);
 		}
+		*/
 
 		
 	}

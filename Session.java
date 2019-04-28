@@ -22,33 +22,54 @@ public class Session extends Thread {
 	public boolean joined = false;
 
 	public ArrayList<Peer> peers;
+	public ArrayList<InetSocketAddress> forwardAddresses; 
 
 	public ChatUI ui = null;
 	public int serverPort;
+
+	public InetAddress group;
+	public int port;
 
 	//Users information
 	public String name;
 	public int zip;
 	public int age;
 
-	private ServerSocket server = null;
-	private Socket socket = null;
+	//private ServerSocket server = null;
+	private MulticastSocket socket = null;
 
 	//Restictions
 	int name_max_length = 32;
 
 
-	public Session(String name, int zip, int age, int port) throws IllegalArgumentException, IOException {
+	public Session(String name, int zip, int age, int port, String[] forwardArr) {
 		setUserName(name);
 		setAge(age);
 		setZip(zip);
+
+		forwardAddresses = new ArrayList<InetSocketAddress>();
+
+		for (String f: forwardArr) {
+			if (f != null) {
+				String ip = f.substring(0,f.indexOf(":"));
+				int fport = Integer.parseInt(f.substring(f.indexOf(":")+1, f.length()));
+
+				System.out.println(ip);
+				System.out.println(fport);
+
+				InetSocketAddress addr = new InetSocketAddress(ip, port);
+
+				forwardAddresses.add(addr);
+			}
+		}
 		peers = new ArrayList<Peer>();
 		this.serverPort = port;
-		this.server = new ServerSocket(serverPort);
-		this.serverPort = port;
+		//this.server = new ServerSocket(serverPort);
+		//this.serverPort = port;
 		this.start();
 
 	}
+
 
 	public void run() {
 
@@ -56,8 +77,23 @@ public class Session extends Thread {
 
 		//Sessions never stop until the entire program quits
 		while (1>0) {
-			if (server != null) {
+			if (socket != null) {
+
+				DatagramPacket packet = new DatagramPacket(new byte[10000], 10000);
 				try {
+					socket.receive(packet);
+				}
+				catch (Exception e) {}
+				String data = new String(packet.getData(), 0, packet.getLength());
+
+				//System.out.println(packet.getAddress());
+
+				//System.out.println(packet.getLength());
+
+				//Process the unforwarded message
+				processMessage(data, null, packet.getAddress().toString());
+				//try {
+					/*
 					Socket sock = server.accept();
 					BufferedWriter out = new BufferedWriter(new OutputStreamWriter(sock.getOutputStream()));
 					BufferedReader in = new BufferedReader(new InputStreamReader(sock.getInputStream()));
@@ -66,12 +102,13 @@ public class Session extends Thread {
 					p.start();
 					peers.add(p);
 					joined = true;
+					*/
 
-				}
+				//}
 
-				catch (Exception e) {
+				//catch (Exception e) {
 					//e.printStackTrace();
-				}
+				//}
 
 			}
 
@@ -83,6 +120,106 @@ public class Session extends Thread {
 		}
 
 	}
+
+	public void processMessage(String message, InetAddress forwarder, String ip) {
+		JSONObject input = new JSONObject(message);
+
+		ip  = ip.substring(1,ip.length());
+
+		//Message came from me, just ignore it
+		if (input.get("sender").toString().equals(name)) {
+			return;
+		}
+
+		//Message came from a multicast, send to all forwarders
+		else if (forwarder == null) {
+
+			for (InetSocketAddress f:forwardAddresses) {
+				forward(message, f);
+			}
+		}
+
+		//It was forwarded, so send it on to all other forwarders
+		else {
+			for (InetSocketAddress f:forwardAddresses) {
+				if (!(f.getAddress().equals(forwarder))) {
+					forward(message, f);
+				}
+			}
+		}
+
+		//Forwarding is done, process locally now
+		String type = input.get("type").toString();
+
+
+		switch (type) {
+			case "message":
+				System.out.println("<" + input.get("sender") + "> " + input.get("message").toString());
+				break;
+			case "join":
+				//Learn about the peer
+				String name = input.get("sender").toString();
+				String sip = input.get("ip").toString();
+				int zip = 0;
+				int age = 0;
+				String myIp = "";
+				try {
+					zip = Integer.parseInt(input.get("zip").toString());
+					age = Integer.parseInt(input.get("age").toString());
+
+					myIp = InetAddress.getLocalHost().toString();
+				}
+
+				catch (Exception e) {}
+
+				Peer p = new Peer(name, age, zip, sip, this);
+				peers.add(p);
+
+				System.out.println("[member joined: " + name +"@" + ip +" " + zip + " " + age + "]");
+
+
+				//Tell them about me
+				JSONObject resp = new JSONObject();
+				resp.put("type", "join-reply");
+				resp.put("sender", this.name);
+				resp.put("age", this.age);
+				resp.put("zip", this.zip);
+				resp.put("ip", myIp);
+
+				sendEverywhere(resp);
+				break;
+
+			case "join-reply":
+				name = input.get("sender").toString();
+				sip = input.get("ip").toString();
+				zip = 0;
+				age = 0;
+				try {
+					zip = Integer.parseInt(input.get("zip").toString());
+					age = Integer.parseInt(input.get("age").toString());
+				}
+
+				catch (Exception e) {}
+
+				p = new Peer(name, age, zip, sip, this);
+				peers.add(p);
+				break;
+
+			case "leave":
+				name = input.get("sender").toString();
+
+				for (Peer peer:peers) {
+					if (peer.name.equals(name)) {
+						peers.remove(peer);
+						System.out.println("[" + name + "@" + ip + " left the chat]");
+						break;
+					}
+				}
+				break;
+
+		}
+	}
+
 
 	public String asString() {
 		return "[" + name + " " + age + " " + zip +"]";
@@ -133,40 +270,28 @@ public class Session extends Thread {
 		Leave the chat
 		silent: boolean whether or not it should print that you left
 	*/
-	public void leave(boolean silent) {
+	public void leave() {
 		JSONObject message = new JSONObject();
 		message.put("type", "leave");
-		for (Peer p:peers) {
-			try {
-				p.deliver(message.toString());
-				p.in.close();
-				p.out.close();
-				p.sock.close();
-				p.joined = false;
-			}
-			catch (Exception e) {
-				e.printStackTrace();
-			}
-		}
-		if (!silent) {
-			System.out.println("[left chat]");
-		}
+		message.put("sender", this.name);
+		
+		System.out.println("[left chat]");
 
 		peers = new ArrayList<Peer>();
 
 		joined = false;
-	}
 
-	/*
-		Added the boolean requirement later, keep around a no args version in case
-	*/
-	public void leave() {
-		leave(false);
+		//Close forwarding server
+		//forwarder.close();
+		//forwarder = null;
+		
+		sendEverywhere(message);
 	}
 
 	public JSONArray peersExcluding(Peer exclude) {
 		JSONArray peersResp = new JSONArray();
 
+		/*
 		for (Peer p:peers) {
 			//Dont tell a peer about themself
 			if (p != exclude) {
@@ -177,7 +302,7 @@ public class Session extends Thread {
 			}
 
 		}
-
+		*/
 		return peersResp;
 	}
 
@@ -187,7 +312,8 @@ public class Session extends Thread {
 		ip: the ip to connect to
 		discover: Whether the peer needs to discover the network
 	*/
-	public void joinPeer(String ip, int port, boolean discover) throws IOException {
+		/*
+	public void joinPeer(String ip, int port, boolean discover, String[] f) throws IOException {
 
 		Socket sock = new Socket();//(ip, port);
 		sock.connect(new InetSocketAddress(ip, port), 1000);
@@ -202,15 +328,35 @@ public class Session extends Thread {
 		joined = true;
 
 	}
+	*/
 
 	public void joinPortAndIP(int port, String ip) throws IOException {
-		joinPeer(ip, port, true);
+		//joinPeer(ip, port, true);
+		socket = new MulticastSocket(port);
+		socket.setLoopbackMode(true);
+
+		group = InetAddress.getByName(ip);
+		this.port = port;
+		try {
+			socket.joinGroup(group);
+
+			JSONObject message = new JSONObject();
+			message.put("type", "join");
+			message.put("sender", this.name);
+			message.put("age", this.age);
+			message.put("zip", this.zip);
+			message.put("ip", InetAddress.getLocalHost().toString());
+
+			sendEverywhere(message);
+
+			joined = true;
+			System.out.println("[joined chat]-");
+		}
+		catch (Exception e) {
+			e.printStackTrace();
+		}
 	}
 
-	//No port provided, assume host uses the same port
-	public void joinIP(String ip) throws IOException {
-		joinPeer(ip, serverPort, true);
-	}
 
 	public void setUserName(String name) throws IllegalArgumentException {
 		this.name = name;
@@ -248,6 +394,47 @@ public class Session extends Thread {
 	}
 
 	/*
+		Multicast the formatted message
+	*/
+	public void multicast(JSONObject payload) {
+		byte[] buf = payload.toString().getBytes();
+
+		try {
+            DatagramSocket s = new DatagramSocket();
+     
+            DatagramPacket packet = new DatagramPacket(buf, buf.length, group, port);
+            s.send(packet);
+            s.close();
+        }
+        catch (Exception e) {
+            e.printStackTrace();
+        }
+	}
+
+	public void forward(String message, InetSocketAddress addr) {
+		try {
+			Socket s = new Socket();
+			s.connect(addr, 1000);
+			BufferedWriter out = new BufferedWriter(new OutputStreamWriter(s.getOutputStream()));
+			out.write(message);
+
+			out.close();
+		}
+
+		catch (Exception e) {
+			e.printStackTrace();
+		}
+	}
+
+	public void sendEverywhere(JSONObject payload) {
+		multicast(payload);
+
+		for (InetSocketAddress addr: forwardAddresses) {
+			forward(payload.toString(), addr);
+		}
+	}
+
+	/*
 		Accepts raw keyboard input from user
 		Escapes message and inserts into correct format
 		Delivers to each peer
@@ -256,8 +443,26 @@ public class Session extends Thread {
 
 		//Format the message as json and escape the text
 		JSONObject m = new JSONObject();
+		m.put("sender", this.name);
 		m.put("type", "message");
 		m.put("message", message);
+
+		sendEverywhere(m);
+
+        /*
+
+		try {
+			System.out.println(socket.getInterface());
+			socket.send(packet);
+		}
+
+		catch (Exception e) {
+			e.printStackTrace();
+			System.out.println("Somethisn wrong");
+		}
+		*/
+
+		/*
 
 		Peer[] example = new Peer[peers.size()];
 
@@ -267,6 +472,7 @@ public class Session extends Thread {
 			Peer p = peerArr[i];
 			p.deliver(m.toString());
 		}
+		*/
 	}
 
 }

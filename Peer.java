@@ -6,43 +6,26 @@
 	Part of data comm homework 3
 */
 
-import java.net.*;
-import java.io.*;
 
-import org.json.JSONObject;
-import org.json.JSONArray;
-
-public class Peer extends Thread {
+public class Peer {
 	public String name = null;
 	public int age = 0;
 	public int zip = 0;
 
-	public Socket sock = null;
-	public BufferedReader in = null;
-	public BufferedWriter out = null;
 
+	private String ip;
 	private Session s = null;
 
-	//Whether or not the connection to this peer was created by "me" or if they initiated it
-	private boolean initiated;
 
-	//Whether or not the peer needs to be queried for a list of peers
-	private boolean discover;
-
-	public boolean joined = false;
-
-	public int port;
-
-	public Peer(Socket sock, BufferedReader in, BufferedWriter out, Session s, boolean initiated, boolean discover, int port) {
-		this.sock = sock;
-		this.in = in;
-		this.out = out;
+	public Peer(String name, int age, int zip, String ip, Session s) {
+		this.name = name;
+		this.age = age;
+		this.zip = zip;
+		this.ip = ip;
 		this.s = s;
-		this.initiated = initiated;
-		this.discover = discover;
-		this.port = port;
 	}
 
+	/*
 	public void run() {
 		try {
 			//Peer hasn't fully joined
@@ -176,8 +159,11 @@ public class Peer extends Thread {
 			e.printStackTrace();
 		}
 	}
+	*/
+
 
 	public void deliver(String message) {
+		/*
 		try {
 			out.write(message);
 			out.newLine();
@@ -202,13 +188,14 @@ public class Peer extends Thread {
 		catch (Exception e) {
 			e.printStackTrace();
 		}
+		*/
 	}
 
 	/*
 		Really java... I can't overwrite toString()?
 	*/
 	public String asString() {
-		return "[" + name + " " + age + " " + zip +"]";
+		return "[" + name + "@" + this.ip + " " + age + " " + zip +"]";
 	}
 
 	public void setUserName(String name) {
@@ -235,9 +222,11 @@ public class Peer extends Thread {
 		}
 	}
 
+	/*
 	public String getIP() {
 		String ip = sock.getRemoteSocketAddress().toString();
 		ip = ip.substring(1,ip.indexOf(":"));
 		return ip;
 	}
+	*/
 }

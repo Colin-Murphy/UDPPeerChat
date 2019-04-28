@@ -42,7 +42,7 @@ public class ChatUI extends Thread {
 										}
 										// /join ip
 										else if (words.length == 2) {
-											s.joinIP(words[1]);
+											s.joinPortAndIP(8080, words[1]);
 											command = true;
 										}
 
@@ -53,7 +53,7 @@ public class ChatUI extends Thread {
 									catch (Exception e) {
 										System.out.println("[join failure - 2 (Can't connect)]");
 										//Stop listening on the port in case it was the ip that failed
-										s.leave(true);
+										s.leave();
 									}
 								}
 								else {
