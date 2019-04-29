@@ -112,26 +112,40 @@ public class Session extends Thread {
 
 		ip  = ip.substring(1,ip.length());
 
+		String from = "";
+		try {
+			from = input.get("forwarder").toString();
+		}
+		catch (Exception e) {
+			//not forwarded
+		}
+
 		//Message came from me, just ignore it
-		if (input.get("sender").toString().equals(name)) {
+		if (input.get("sender").toString().equals(name) || from.equals(name)) {
 			return;
 		}
 
 		//Message came from a multicast, send to all forwarders
 		else if (forwarder == null) {
 
+			input.put("forwarder", this.name);
+
 			for (InetSocketAddress f:forwardAddresses) {
-				forward(message, f);
+				forward(input.toString(), f);
 			}
 		}
 
 		//It was forwarded, so send it on to all other forwarders
 		else {
+			input.put("forwarder", this.name);
 			for (InetSocketAddress f:forwardAddresses) {
 				if (!(f.getAddress().equals(forwarder))) {
-					forward(message, f);
+					forward(input.toString(), f);
 				}
 			}
+
+			//Also multicast it
+			multicast(input);
 		}
 
 		//Forwarding is done, process locally now
@@ -167,12 +181,18 @@ public class Session extends Thread {
 				resp.put("sender", this.name);
 				resp.put("age", this.age);
 				resp.put("zip", this.zip);
+				resp.put("target", name);
 
 				sendEverywhere(resp);
 				break;
 
 			case "join-reply":
 				name = input.get("sender").toString();
+				String target = input.get("target").toString();
+
+				if (!target.equals(this.name)) {
+					return;
+				}
 				zip = 0;
 				age = 0;
 				try {
@@ -269,9 +289,11 @@ public class Session extends Thread {
 		joined = false;
 
 		//Close forwarding server
-		forwardServer.close();
-		forwardServer.stop();
-		forwardServer = null;
+		if (forwardServer != null) {
+			forwardServer.close();
+			forwardServer.stop();
+			forwardServer = null;
+		}
 		
 		sendEverywhere(message);
 	}
@@ -303,7 +325,7 @@ public class Session extends Thread {
 			System.out.println("[joined chat]-");
 		}
 		catch (Exception e) {
-			e.printStackTrace();
+			//e.printStackTrace();
 		}
 	}
 
@@ -357,7 +379,7 @@ public class Session extends Thread {
             s.close();
         }
         catch (Exception e) {
-            e.printStackTrace();
+            //e.printStackTrace();
         }
 	}
 
@@ -379,7 +401,7 @@ public class Session extends Thread {
 		}
 
 		catch (Exception e) {
-			e.printStackTrace();
+			//e.printStackTrace();
 		}
 	}
 

@@ -95,7 +95,7 @@ ip netns exec pc5 route add default gw 10.0.2.250
 
 
 ip netns exec pc1 xterm -hold -T "PeerChat 1" -e "java PeerChat -p 10000 -f 10.0.1.1:10000 -f 10.0.2.1:10000 Bob 12345 15; $SHELL" &
-ip netns exec pc5 xterm -hold -T "PeerChat 5" -e "java PeerChat Billy 12345 14; $SHELL" &
+ip netns exec pc5 xterm -hold -T "PeerChat 2" -e "java PeerChat Billy 12345 14; $SHELL" &
 ip netns exec pc3 xterm -hold -T "PeerChat 3" -e "java PeerChat -p 10000 -f 10.0.0.1:10000 ObiWan 12345 80; $SHELL" &
 ip netns exec pc4 xterm -hold -T "PeerChat 4" -e "java PeerChat Jason 12345 14; $SHELL" &
 ip netns exec pc5 xterm -hold -T "PeerChat 5" -e "java PeerChat -p 10000 -f 10.0.0.1:10000 David 12345 25; $SHELL" &

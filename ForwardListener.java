@@ -40,7 +40,7 @@ public class ForwardListener extends Thread {
 			}
 
 			catch (Exception e) {
-				e.printStackTrace();
+				//e.printStackTrace();
 			}
 		}
 
@@ -52,7 +52,7 @@ public class ForwardListener extends Thread {
 		}
 
 		catch (Exception e) {
-			e.printStackTrace();
+			//e.printStackTrace();
 		}
 	}
 }
