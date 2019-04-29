@@ -53,17 +53,17 @@ public class Session extends Thread {
 
 		for (String f: forwardArr) {
 			if (f != null && !f.equals("")) {
-				System.out.println(f);
+				//System.out.println(f);
 				String ip = f.substring(0,f.indexOf(":"));
 				int fport = Integer.parseInt(f.substring(f.indexOf(":")+1, f.length()));
 
-				System.out.println(ip);
-				System.out.println(fport);
+				//System.out.println(ip);
+				//System.out.println(fport);
 
 				InetSocketAddress addr = new InetSocketAddress(ip, fport);
 
-				System.out.println(addr.getPort());
-				System.out.println(addr.getAddress());
+				//System.out.println(addr.getPort());
+				//System.out.println(addr.getAddress());
 
 				forwardAddresses.add(addr);
 			}
@@ -92,29 +92,9 @@ public class Session extends Thread {
 				catch (Exception e) {}
 				String data = new String(packet.getData(), 0, packet.getLength());
 
-				//System.out.println(packet.getAddress());
-
-				//System.out.println(packet.getLength());
-
 				//Process the unforwarded message
 				processMessage(data, null, packet.getAddress().toString());
-				//try {
-					/*
-					Socket sock = server.accept();
-					BufferedWriter out = new BufferedWriter(new OutputStreamWriter(sock.getOutputStream()));
-					BufferedReader in = new BufferedReader(new InputStreamReader(sock.getInputStream()));
 
-					Peer p = new Peer(sock, in, out, this, false, false, 0);
-					p.start();
-					peers.add(p);
-					joined = true;
-					*/
-
-				//}
-
-				//catch (Exception e) {
-					//e.printStackTrace();
-				//}
 
 			}
 
@@ -290,33 +270,11 @@ public class Session extends Thread {
 
 		//Close forwarding server
 		forwardServer.close();
+		forwardServer.stop();
 		forwardServer = null;
 		
 		sendEverywhere(message);
 	}
-
-	/*
-		Connect to a peer
-		ip: the ip to connect to
-		discover: Whether the peer needs to discover the network
-	*/
-		/*
-	public void joinPeer(String ip, int port, boolean discover, String[] f) throws IOException {
-
-		Socket sock = new Socket();//(ip, port);
-		sock.connect(new InetSocketAddress(ip, port), 1000);
-		BufferedWriter out = new BufferedWriter(new OutputStreamWriter(sock.getOutputStream()));
-		BufferedReader in = new BufferedReader(new InputStreamReader(sock.getInputStream()));
-
-		Peer p = new Peer(sock, in, out, this, true, discover, port);
-		p.start();
-
-		peers.add(p);
-
-		joined = true;
-
-	}
-	*/
 
 	public void joinPortAndIP(int port, String ip) throws IOException {
 		//joinPeer(ip, port, true);
@@ -405,13 +363,13 @@ public class Session extends Thread {
 
 	public void forward(String message, InetSocketAddress addr) {
 		try {
-			System.out.println("Forwarding to: ");
+			//System.out.println("Forwarding to: ");
 
-			System.out.println(addr.getAddress());
-			System.out.println(addr.getPort());
+			//System.out.println(addr.getAddress());
+			//System.out.println(addr.getPort());
 
 			Socket s = new Socket();
-			s.connect(addr); //new InetSocketAddress("10.0.1.2", 10000), 1000);
+			s.connect(addr, 1000); //new InetSocketAddress("10.0.1.2", 10000), 1000);
 			BufferedWriter out = new BufferedWriter(new OutputStreamWriter(s.getOutputStream()));
 			out.write(message);
 			out.newLine();

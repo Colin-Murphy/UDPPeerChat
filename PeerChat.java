@@ -78,50 +78,6 @@ public class PeerChat {
 		ui.s = s;
 		ui.start();
 
-		/*
-		System.out.println(name);
-		System.out.println(age);
-		System.out.println(zip);
-		System.out.println(port);
-
-		for (int j=0; j<fIndex; j++) {
-			System.out.println(forwards[j]);
-		}
-		*/
-
-		/*
-		try {
-
-			ui = new ChatUI();
-			if (args.length != argsWithPort && args.length != argsNoPort) {
-				System.err.println("Invalid Arguments: Exiting...");
-				System.exit(1);
-			}
-
-			//Provided a port to join
-			else if (args.length == argsWithPort) {
-				s = new Session(args[2], Integer.parseInt(args[3]), Integer.parseInt(args[4]), Integer.parseInt(args[1]));
-			}
-
-			else {
-				s = new Session(args[0], Integer.parseInt(args[1]), Integer.parseInt(args[2]), 8080);
-
-			}
-
-			ui.s = s;
-			ui.start();
-		}
-
-		catch (BindException e) {
-			System.err.println("Port already in use, use -p to join a different one");
-			System.exit(1);
-		}
-
-		catch (Exception e) {
-			System.err.println("Invalid Arguments: Exiting...");
-			System.exit(1);
-		}
-		*/
 
 		
 	}

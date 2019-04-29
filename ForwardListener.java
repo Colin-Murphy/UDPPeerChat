@@ -14,8 +14,8 @@ public class ForwardListener extends Thread {
 	
 	public void run() {
 
-		System.out.println("Forward server listening");
-		System.out.println(this.port);
+		//System.out.println("Forward server listening");
+		//System.out.println(this.port);
 
 		try {
 			server = new ServerSocket(port);
@@ -27,13 +27,14 @@ public class ForwardListener extends Thread {
 
 		while (1>0) {
 			try {
-				System.out.println("Waiting for connection");
+				//System.out.println("Waiting for connection");
+				//System.out.println(server.getLocalPort());
 				Socket sock = server.accept();
-				System.out.println("Got connection");
+				//System.out.println("Got connection");
 				BufferedReader in = new BufferedReader(new InputStreamReader(sock.getInputStream()));
 
 				String message = in.readLine();
-				System.out.println("Got forwarded message");
+				//System.out.println("Got forwarded message");
 				in.close();
 				s.processMessage(message, sock.getInetAddress(), sock.getInetAddress().toString());
 			}
