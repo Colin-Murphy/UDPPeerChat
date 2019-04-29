@@ -100,5 +100,5 @@ ip netns exec pc3 xterm -hold -T "PeerChat 3" -e "java PeerChat -p 10000 -f 10.0
 ip netns exec pc4 xterm -hold -T "PeerChat 4" -e "java PeerChat Jason 12345 14; $SHELL" &
 ip netns exec pc5 xterm -hold -T "PeerChat 5" -e "java PeerChat -p 10000 -f 10.0.0.1:10000 David 12345 25; $SHELL" &
 
-#ip netns exec router xterm -hold -T "Router" -e "echo Router; $SHELL" &
+ip netns exec router xterm -hold -T "Router" -e "$SHELL" &
 
