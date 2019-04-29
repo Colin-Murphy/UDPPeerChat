@@ -35,6 +35,8 @@ public class Session extends Thread {
 	public int zip;
 	public int age;
 
+	private ForwardListener forwardServer = null;
+
 	//private ServerSocket server = null;
 	private MulticastSocket socket = null;
 
@@ -50,14 +52,18 @@ public class Session extends Thread {
 		forwardAddresses = new ArrayList<InetSocketAddress>();
 
 		for (String f: forwardArr) {
-			if (f != null) {
+			if (f != null && !f.equals("")) {
+				System.out.println(f);
 				String ip = f.substring(0,f.indexOf(":"));
 				int fport = Integer.parseInt(f.substring(f.indexOf(":")+1, f.length()));
 
 				System.out.println(ip);
 				System.out.println(fport);
 
-				InetSocketAddress addr = new InetSocketAddress(ip, port);
+				InetSocketAddress addr = new InetSocketAddress(ip, fport);
+
+				System.out.println(addr.getPort());
+				System.out.println(addr.getAddress());
 
 				forwardAddresses.add(addr);
 			}
@@ -159,20 +165,17 @@ public class Session extends Thread {
 			case "join":
 				//Learn about the peer
 				String name = input.get("sender").toString();
-				String sip = input.get("ip").toString();
 				int zip = 0;
 				int age = 0;
 				String myIp = "";
 				try {
 					zip = Integer.parseInt(input.get("zip").toString());
 					age = Integer.parseInt(input.get("age").toString());
-
-					myIp = InetAddress.getLocalHost().toString();
 				}
 
 				catch (Exception e) {}
 
-				Peer p = new Peer(name, age, zip, sip, this);
+				Peer p = new Peer(name, age, zip, ip, this);
 				peers.add(p);
 
 				System.out.println("[member joined: " + name +"@" + ip +" " + zip + " " + age + "]");
@@ -184,14 +187,12 @@ public class Session extends Thread {
 				resp.put("sender", this.name);
 				resp.put("age", this.age);
 				resp.put("zip", this.zip);
-				resp.put("ip", myIp);
 
 				sendEverywhere(resp);
 				break;
 
 			case "join-reply":
 				name = input.get("sender").toString();
-				sip = input.get("ip").toString();
 				zip = 0;
 				age = 0;
 				try {
@@ -201,7 +202,7 @@ public class Session extends Thread {
 
 				catch (Exception e) {}
 
-				p = new Peer(name, age, zip, sip, this);
+				p = new Peer(name, age, zip, ip, this);
 				peers.add(p);
 				break;
 
@@ -246,7 +247,7 @@ public class Session extends Thread {
 
 		for (Peer p: peers) {
 			if (p.zip == zip) {
-				System.out.println(p.asString());
+				System.out.println(p.asSimpleString());
 			}
 		}
 	}
@@ -261,14 +262,13 @@ public class Session extends Thread {
 
 		for (Peer p: peers) {
 			if (p.age == age) {
-				System.out.println(p.asString());
+				System.out.println(p.asSimpleString());
 			}
 		}
 	}
 
 	/*
 		Leave the chat
-		silent: boolean whether or not it should print that you left
 	*/
 	public void leave() {
 		JSONObject message = new JSONObject();
@@ -279,33 +279,21 @@ public class Session extends Thread {
 
 		peers = new ArrayList<Peer>();
 
+		try {
+			socket.close();
+			socket = null;
+		}
+
+		catch (Exception e) {}
+
 		joined = false;
 
 		//Close forwarding server
-		//forwarder.close();
-		//forwarder = null;
+		forwardServer.close();
+		forwardServer = null;
 		
 		sendEverywhere(message);
 	}
-
-	public JSONArray peersExcluding(Peer exclude) {
-		JSONArray peersResp = new JSONArray();
-
-		/*
-		for (Peer p:peers) {
-			//Dont tell a peer about themself
-			if (p != exclude) {
-				JSONObject peer = new JSONObject();
-				peer.put("ip", p.getIP());
-				peer.put("port", p.port);
-				peersResp.put(peer);
-			}
-
-		}
-		*/
-		return peersResp;
-	}
-
 
 	/*
 		Connect to a peer
@@ -345,7 +333,11 @@ public class Session extends Thread {
 			message.put("sender", this.name);
 			message.put("age", this.age);
 			message.put("zip", this.zip);
-			message.put("ip", InetAddress.getLocalHost().toString());
+
+			if (serverPort != 0) {
+				forwardServer = new ForwardListener(serverPort, this);
+				forwardServer.start();
+			}
 
 			sendEverywhere(message);
 
@@ -413,10 +405,17 @@ public class Session extends Thread {
 
 	public void forward(String message, InetSocketAddress addr) {
 		try {
+			System.out.println("Forwarding to: ");
+
+			System.out.println(addr.getAddress());
+			System.out.println(addr.getPort());
+
 			Socket s = new Socket();
-			s.connect(addr, 1000);
+			s.connect(addr); //new InetSocketAddress("10.0.1.2", 10000), 1000);
 			BufferedWriter out = new BufferedWriter(new OutputStreamWriter(s.getOutputStream()));
 			out.write(message);
+			out.newLine();
+			out.flush();
 
 			out.close();
 		}

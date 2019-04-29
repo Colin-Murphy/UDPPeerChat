@@ -198,6 +198,10 @@ public class Peer {
 		return "[" + name + "@" + this.ip + " " + age + " " + zip +"]";
 	}
 
+	public String asSimpleString() {
+		return "[" + name + " " + age + " " + zip +"]";
+	}
+
 	public void setUserName(String name) {
 		this.name = name;
 
